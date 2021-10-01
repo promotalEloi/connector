@@ -43,7 +43,7 @@ export class DevicesService {
                 const n = this.dataString.search("aa5543070100");
                 var tmpHigh = parseInt(this.dataString.substring(n + 12, n + 14), 16);
                 var tmpLo = parseInt(this.dataString.substring(n + 16, n + 18), 16);
-                valTension = tmpLo.toString() + "//" + tmpHigh.toString();
+                valTension = `${(tmpHigh /10).toString()}/${(tmpLo / 10).toString()}`;
                 mesures.push(
                   {
                       label: 'Tension',
@@ -57,7 +57,7 @@ export class DevicesService {
             if (this.dataString.substring(0, this.dataString.length - 6).includes('aa5572050140')) {
                 const n = this.dataString.search("aa5572050140");
                 var tmpRead = parseInt(this.dataString.substring(n + 12, n + 16), 16);
-                valTemp = 30 + tmpRead / 100;
+                valTemp = Math.round((30 + tmpRead / 100) * 10) / 10;
                 mesures.push(
                   {
                       label: 'Temperature',
