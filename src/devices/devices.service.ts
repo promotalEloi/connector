@@ -57,7 +57,7 @@ export class DevicesService {
             if (this.dataString.substring(0, this.dataString.length - 6).includes('aa5572050140')) {
                 const n = this.dataString.search("aa5572050140");
                 var tmpRead = parseInt(this.dataString.substring(n + 12, n + 16), 16);
-                valTemp = Math.round((30 + tmpRead / 100) * 10) / 10;
+                valTemp = Math.round((30 + tmpRead) * 10) / 10;
                 mesures.push(
                   {
                       label: 'Temperature',
@@ -77,6 +77,11 @@ export class DevicesService {
                       label: 'Glycemie capillaire',
                       value: valGlycemie.toString(),
                       unit: 'mg/dL'
+                  },
+                  {
+                      label: 'Glycémie capillaire',
+                      value: (Math.round((valGlycemie / 18.18) * 10) / 10).toString();
+                      unit: 'mmol/L'
                   })
                 this.dataString = "";
             }
@@ -96,7 +101,6 @@ export class DevicesService {
         setInterval(() => {
             const mesures = this.dataswaitList.pop();
             if (mesures && mesures.length > 0) {
-                Logger.log(JSON.stringify(mesures))
                 this.liveStream.server.to('staff').emit('PC300', mesures);
             }
         }, 500)
