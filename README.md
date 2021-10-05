@@ -1,4 +1,3 @@
-Un nouveau connecteur a été réalisé par @<Thomas Goodarzi> :
 ## Présentation
 - Celui-ci est un serveur nestjs tournant sur l'ordinateur ayant les équipements médicaux
    - Il envoie les donnés du moniteur de signe vitaux
