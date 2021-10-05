@@ -80,7 +80,7 @@ export class DevicesService {
                   },
                   {
                       label: 'Glycémie capillaire',
-                      value: (Math.round((valGlycemie / 18.18) * 10) / 10).toString();
+                      value: (Math.round((valGlycemie / 18.18) * 10) / 10).toString(),
                       unit: 'mmol/L'
                   })
                 this.dataString = "";
