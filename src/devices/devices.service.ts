@@ -44,7 +44,6 @@ export class DevicesService {
                 var tmpHigh = parseInt(this.dataString.substring(n + 12, n + 14), 16);
                 var tmpLo = parseInt(this.dataString.substring(n + 16, n + 18), 16);
                 valTension = `${(tmpHigh /10).toString()}/${(tmpLo / 10).toString()}`;
-                Logger.log('regarde ' + valTension.toString())
                 mesures.push(
                   {
                       label: 'Tension',
