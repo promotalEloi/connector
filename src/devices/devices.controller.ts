@@ -11,11 +11,6 @@ export class DevicesController {
         return await this.deviceService.getCarteVitaleDatas();
     }
 
-
-/*    @Post('ECG')
-    async getECG(@Body() datas: any) {
-        return this.deviceService.getECG(datas);
-    }*/
 }
 
 
