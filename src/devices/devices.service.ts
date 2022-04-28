@@ -146,7 +146,7 @@ export class DevicesService {
                 data = data.toString();
                 data = data.replace('Buff : <?xml version="1.0" encoding="ISO-8859-1"?>','');
                 const benefs = data.split('</T_AsnBeneficiaire><T_AsnBeneficiaire>');
-                const search = ['date', 'adresse', 'prenomUsuel', 'nomUsuel', 'caisse', 'nir', 'codeRegime', 'caisse', 'centreCarte'];
+                const search = ['date', 'adresse', 'prenomUsuel', 'nomUsuel', 'nir', 'codeGestion', 'codeRegime', 'caisse'];
                 const listBenefs = [];
                 benefs.forEach(benef => {
                     const infos = {};
