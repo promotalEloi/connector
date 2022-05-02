@@ -101,7 +101,7 @@ export class DevicesService {
         setInterval(() => {
             const mesures = this.dataswaitList.pop();
             if (mesures && mesures.length > 0) {
-                this.liveStream.server.to('staff').emit('PC300', mesures);
+                this.liveStream.server.emit('PC300', mesures);
             }
         }, 500)
     }
@@ -135,7 +135,7 @@ export class DevicesService {
                     }
                 });
             }
-            this.liveStream.server.to('staff').emit('PC300status', found);
+            this.liveStream.server.emit('PC300status', found);
         }, 3000);
     }
 
