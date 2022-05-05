@@ -12,7 +12,7 @@ import {Server, Socket} from 'socket.io';
 import { Logger } from '@nestjs/common';
 
 @WebSocketGateway(4000, {allowEIO3: true, cors: {
-    origin: ["https://connect.promotal.com","https://connect.dev.promotal.com", "http://localhost:4200"],
+    origin: ["https://connect.promotal.com","https://connect.dev.promotal.com", "http://localhost:4200", "https://new.connect.dev.promotal.com", "https://new.connect.promotal.com"],
     credentials: true,
     methods: ["GET", "POST"]
   }})
