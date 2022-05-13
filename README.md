@@ -4,6 +4,12 @@
    - De la carte vitale
    - Lis les fichiers générés par le logiciel Cardiolane
 
+### build
+
+``nest build``
+
+``nexe dist/main.js --build``
+
 ## Installation
 
 1. Il faut tout d'abord installer nodejs ainsi que npm 

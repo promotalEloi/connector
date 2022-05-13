@@ -1,13 +1,33 @@
 import {ForbiddenException, Injectable, Logger} from '@nestjs/common';
 import * as child from 'child_process';
-import * as sp from 'serialport';
+import { SerialPort } from 'serialport'
 import * as fs from 'fs';
 import {LivestreamGateway} from "../livestream/livestream.gateway";
+
+
+
 @Injectable()
 export class DevicesService {
     constructor(private liveStream: LivestreamGateway) {}
     dataString = '';
     dataswaitList = [];
+    found = false;
+    private msvREADY = false;
+
+    get MSVONLINE() {
+        return this.msvREADY
+    }
+
+    set MSVONLINE(value: boolean){
+        this.msvREADY = value
+    }
+
+    crashed = false
+
+    /**
+     * HANDLES BYTES COMING IN
+     * @param data bytes data that is converted hex string affter that
+     */
     private handleData(data) {
         let valSPO2;
         let valPouls;
@@ -16,11 +36,26 @@ export class DevicesService {
         let valTension;
         var mesures = [];
         this.dataString += data.toString('hex');
+       
+        //MSVHEALTHCHCECK
+        // Checks if MSV is "on"
+        if (this.dataString.includes('aa55ff')) {
+            this.dataString = "";
+            this.MSVONLINE = true
+            console.log("MSVONLINE")
+        }
         if (this.dataString.length >= 18) {
+
+            
+            
+
             //Search SPO2 and Pouls
             //Exemple: [aa 55 53 07 01 61 43 00 25 00 d9] corresponds à SpO2 = 97% et Pouls = 67 bpm
             if (this.dataString.substring(0, this.dataString.length - 6).includes('aa55530701')) {
                 const n = this.dataString.search("aa55530701");
+                // sometimes MSV doesnt answer so we check if they are sending spO2 data
+                this.MSVONLINE = true
+                console.log("MSVONLINE")
                 valSPO2 = parseInt(this.dataString.substring(n + 10, n + 12), 16);
                 valPouls = parseInt(this.dataString.substring(n + 12, n + 14), 16);
                 mesures.push(
@@ -97,6 +132,10 @@ export class DevicesService {
             }
         }
     }
+
+    /**
+     * Emit to listener the last data from the vital signs monitor
+     */
     private sendMesure() {
         setInterval(() => {
             const mesures = this.dataswaitList.pop();
@@ -105,41 +144,182 @@ export class DevicesService {
             }
         }, 500)
     }
-    async init() {
-        let found = false;
-        setInterval(async () => {
-            if(!found){
-                sp.list().then((ports, err) => {
-                    if (ports.length > 0) {
-                        for (const i in ports) {
-                            if (ports[i].manufacturer === 'Prolific') {
-                                found = true;
-                                const ttt = new sp(ports[i].path, {baudRate: 9600 });
-                                ttt.on('data', (data) => {
-                                    this.handleData(data);
-                                });
-                                ttt.on('close', (err) => {
-                                    Logger.log("disconnected");
-                                    Logger.log(err);
-                                    found= false
-                                });
-                                this.sendMesure()
-                            }
-                        }
-                        if (!found) {
-                            Logger.log('Le moniteur de signe Vitaux n\'as pas pu être trouvé');
-                        }
-                    } else {
-                        found = false;
-                        Logger.log('Aucun appareil n\'est connecté');
-                    }
-                });
+
+/**
+ * resets value when the monitor is unplugged
+ */
+    private notifyError(){
+        this.MSVONLINE = false
+        this.found = false
+        this.crashed = true
+    }
+
+    /**
+     * Prints error
+     * @param error serial port error
+     */
+    private onError(error){
+        
+        Logger.log('Error coming from MSV')
+        Logger.log('Monitor might have been unplugged')
+        Logger.log(error)
+    }
+
+    /**
+     * Checks if MSV is still plugged in 
+     * @param port Serial port object
+     */
+    private sendAliveMsg(port){
+        this.MSVONLINE = false
+        port.write('0xaa0x550xFF0x020x010xCA','hex', function(err) {
+            if (err) {
+                console.log(err)
             }
-            this.liveStream.server.emit('PC300status', found);
-        }, 3000);
+            console.log('writing')
+        })
+    }
+
+/**
+ * Get seiral port name
+ * @returns The name of the port or an empty string if its not found
+ */
+    getPortName(): Promise<string>{
+        return new Promise(resolve => {
+            SerialPort.list().then(async (ports) => {
+                if (ports.length == 0) {
+                    resolve("")
+                }
+                for (const i in ports) {
+                    if (ports[i].manufacturer === 'Prolific') {
+                            resolve(ports[i].path)
+                    }
+                }
+            });
+        })
+    }
+
+    /**
+     * Initialize port
+     * @param path name of the port
+     * @param baudRate the port to open the port with
+     * @returns the Serial port object
+     */
+    openPort(path: string, baudRate: number){
+        const port = new SerialPort({path: path, baudRate: baudRate, autoOpen: false });
+        port.on('data', (data) => {
+            this.handleData(data)
+        });
+        port.on('close',(data) => {
+            this.onError(data)
+            this.notifyError()
+        } );
+        this.sendMesure()
+        return port
+    }
+
+    /**
+     * send the helathcheck message
+     * @param port port object
+     * @returns 
+     */
+    checkIfAlive(port){
+        this.sendAliveMsg(port)
+        return new Promise(resolve => setTimeout(resolve,2000, this.MSVONLINE))
+    }
+
+    /**
+     * makes sure every 5 sec that MSV is still working
+     * @param port port object
+     * @returns 
+     */
+    backgroundCheck(port) {
+       return setInterval(() => {
+            this.checkIfAlive(port)
+        }, 5000)
+    }
+
+    /**
+     * possible baud list, the program will iterate on them and stops once he finds data
+     */
+    baudList = [9600, 115200, 38400]
+
+    /**
+     * Recursive function thats tests for different baud rate and checks if the MSV is sending a message
+     * @param port Serial port object
+     * @param lastBaud Last baud rate used
+     * @param j iterate through baudlist array
+     * @returns true if its found a good port
+     */
+    async checkForFound(port,lastBaud, j){
+        if(j === this.baudList.length ){
+            return  this.checkForFound(port,this.baudList[j], 0)
+        }
+        if(this.baudList[j] != lastBaud && port.isOpen){
+            await port.update({
+                baudRate: this.baudList[j]
+            })
+        }
+        this.checkIfAlive(port)
+        /**
+         * waits two seconds to allow the msv to send an answer
+         */
+        setTimeout(()=> {
+            if(this.MSVONLINE){
+                this.backgroundCheck(port)
+                return true
+            } else {
+                return this.checkForFound(port,this.baudList[j], j+1)
+            }
+        }, 2000)
+        
+    }
+
+    /**
+     * Logic functions that runs the msv plug
+     * @returns 
+     */
+    async logic(): Promise<boolean>{
+        const name = await this.getPortName()
+        if(name === ""){
+            return false
+        }
+
+        this.found = true
+        const openedPort = this.openPort(name, 9600)
+        openedPort.open((err) =>  {
+            if (err) {
+                Logger.log("Error opening oprt")
+                Logger.log(err)
+            }
+            this.checkForFound(openedPort,9600, 0)
+        })
+        
+    }
+
+    /**
+     * checks for the vital signs monitor every 5 seconds
+     */
+    startInterval(){
+        setInterval(async () => {
+            if(!this.found ){
+               this.logic()
+            }
+            Logger.log(`Monitor status ${this.MSVONLINE}`)
+            Logger.log(`Found ${this.found}`)
+
+            this.liveStream.server.emit('PC300status', this.MSVONLINE);
+        },5000);
+    }
+
+    async init() {
+        this.startInterval()
     }
 
 
+    /**
+     * Reads carte vitale
+     * @returns Returns carte vitale data
+     */
     getCarteVitaleDatas() {
         return new Promise(async resolve => {
             child.execFile('LecteurVitale.exe', [`LecteurVitale: -ha -u user -ui false -cps true -debugnotes false -listall true -hr -n b`], { cwd: 'C:/Program Files/Promotal/LecteurVitale' }, (err, data) => {
