@@ -170,6 +170,7 @@ export class DevicesService {
      * @param port Serial port object
      */
     private sendAliveMsg(port){
+        if (this.MSVONLINE) return
         this.MSVONLINE = false
         port.write('0xaa0x550xFF0x020x010xCA','hex', function(err) {
             if (err) {
