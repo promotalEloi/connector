@@ -324,6 +324,7 @@ export class DevicesService {
     getCarteVitaleDatas() {
         return new Promise(async resolve => {
             child.execFile('LecteurVitale.exe', [`LecteurVitale: -ha -u user -ui false -cps true -debugnotes false -listall true -hr -n b`], { cwd: 'C:/Program Files/Promotal/LecteurVitale' }, (err, data) => {
+                if (err) Logger.error(err)
                 data = data.toString();
                 data = data.replace('Buff : <?xml version="1.0" encoding="ISO-8859-1"?>','');
                 const benefs = data.split('</T_AsnBeneficiaire><T_AsnBeneficiaire>');
