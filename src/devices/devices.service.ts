@@ -1,4 +1,4 @@
-import {ForbiddenException, Injectable, Logger} from '@nestjs/common';
+import {Injectable, Logger} from '@nestjs/common';
 import * as child from 'child_process';
 import { SerialPort } from 'serialport'
 import * as fs from 'fs';
@@ -36,7 +36,7 @@ export class DevicesService {
         let valTension;
         var mesures = [];
         this.dataString += data.toString('hex');
-       
+
         //MSVHEALTHCHCECK
         // Checks if MSV is "on"
         if (this.dataString.includes('aa55ff')) {
@@ -46,8 +46,8 @@ export class DevicesService {
         }
         if (this.dataString.length >= 18) {
 
-            
-            
+
+
 
             //Search SPO2 and Pouls
             //Exemple: [aa 55 53 07 01 61 43 00 25 00 d9] corresponds à SpO2 = 97% et Pouls = 67 bpm
@@ -60,7 +60,7 @@ export class DevicesService {
                 valPouls = parseInt(this.dataString.substring(n + 12, n + 14), 16);
                 mesures.push(
                   {
-                      label: 'Pulsations',
+                      label: 'Pouls Périphériques',
                       value: valPouls.toString(),
                       unit: 'bpm'
                   });
@@ -95,7 +95,7 @@ export class DevicesService {
                 valTemp = Math.round(((30 + tmpRead / 100)) * 10) / 10;
                 mesures.push(
                   {
-                      label: 'Temperature',
+                      label: 'Température',
                       value: valTemp.toString(),
                       unit: '°C'
                   });
@@ -109,14 +109,9 @@ export class DevicesService {
                 valGlycemie = tmpRead / 10;
                 mesures.push(
                   {
-                      label: 'Glycemie capillaire',
+                      label: 'Glycémie capillaire',
                       value: valGlycemie.toString(),
                       unit: 'mg/dL'
-                  },
-                  {
-                      label: 'Glycémie capillaire',
-                      value: (Math.round((valGlycemie / 18.18) * 10) / 10).toString(),
-                      unit: 'mmol/L'
                   })
                 this.dataString = "";
             }
@@ -159,14 +154,14 @@ export class DevicesService {
      * @param error serial port error
      */
     private onError(error){
-        
+
         Logger.log('Error coming from MSV')
         Logger.log('Monitor might have been unplugged')
         Logger.log(error)
     }
 
     /**
-     * Checks if MSV is still plugged in 
+     * Checks if MSV is still plugged in
      * @param port Serial port object
      */
     private sendAliveMsg(port){
@@ -221,7 +216,7 @@ export class DevicesService {
     /**
      * send the helathcheck message
      * @param port port object
-     * @returns 
+     * @returns
      */
     checkIfAlive(port){
         this.sendAliveMsg(port)
@@ -231,7 +226,7 @@ export class DevicesService {
     /**
      * makes sure every 5 sec that MSV is still working
      * @param port port object
-     * @returns 
+     * @returns
      */
     backgroundCheck(port) {
        return setInterval(() => {
@@ -272,12 +267,12 @@ export class DevicesService {
                 return this.checkForFound(port,this.baudList[j], j+1)
             }
         }, 2000)
-        
+
     }
 
     /**
      * Logic functions that runs the msv plug
-     * @returns 
+     * @returns
      */
     async logic(): Promise<boolean>{
         const name = await this.getPortName()
@@ -294,7 +289,7 @@ export class DevicesService {
             }
             this.checkForFound(openedPort,9600, 0)
         })
-        
+
     }
 
     /**
